@@ -1,0 +1,137 @@
+++++ Materiales
+Raspberry pi 3 o más
+Dongle de wifi, si es que la placa no trae incorporado
+Imager de raspberry pi, asegurarse de dejar habilitado ssh
+
+++++++++++ RaspAP
+Quemar a traves de imager la distribución RaspAP (Se encuentra en otras distribuciones de uso especifico)
+Comprobar que el AP existe, estos deberian ser los settings por default
+
+IP address: 10.3.141.1
+Username: admin
+Password: secret
+DHCP range: 10.3.141.50 — 10.3.141.254
+SSID: RaspAP
+Password: ChangeMe
+
+https://raspap.com/quick-start/#quick-installer
+
+La pagina dice que se puede desde el panel de control de raspAP instalar un portal cautivo
+lamentablemente esto se transformo en una opción paga por lo que la otra opción es instalar nodogsplash directamente 
+en la raspi desde ssh
+
+++++++++++++ instalar nodogsplash
+
+# Actualizar lista de paquetes
+sudo apt update
+
+# Instalar las dependencias necesarias para compilar
+sudo apt install git libmicrohttpd-dev build-essential -y
+sudo apt install libjson-c-dev -y
+
+# Instalar todas las dependencias de desarrollo comunes
+sudo apt install build-essential libmicrohttpd-dev libjson-c-dev -y
+
+# Clonar el repositorio de nodogsplash
+git clone https://github.com/nodogsplash/nodogsplash.git
+cd nodogsplash
+
+# Compilar e instalar
+make
+sudo make install
+
++++++Configurar Nodogsplash para que funcione con RaspAP
+
+Ahora vamos a editar el archivo de configuración para que Nodogsplash use la misma interfaz que RaspAP
+
+sudo nano /etc/nodogsplash/nodogsplash.conf
+
+# GatewayInterface: debe ser la interfaz de tu punto de acceso (normalmente wlan0 es decir el AP de la raspi)
+GatewayInterface wlan0
+
+# GatewayAddress: la IP de tu Raspberry Pi en la red del AP
+GatewayAddress 10.3.141.1
+
+Para que Nodogsplash se inicie solo cuando enciendas la Raspberry Pi 
+
+
+# Copiar el archivo de servicio que viene con nodogsplash
+sudo cp ~/nodogsplash/debian/nodogsplash.service /etc/systemd/system/
+
+# Habilitar el servicio para que arranque con el sistema
+sudo systemctl enable nodogsplash
+
+# Iniciar el servicio ahora
+sudo systemctl start nodogsplash
+
+# Verificar que está funcionando
+sudo systemctl status nodogsplash
+
+
++++++++++++++++++modificar la pagina del portal cautivo
+
+Este es el paso más importante para tu CTF. Vamos a editar la página que verán los participantes :
+
+# Navegar al directorio donde se guardan las páginas
+cd /etc/nodogsplash/htdocs/
+
+# Editar la página principal
+sudo nano splash.html
+
+esto es lo que sugiere deepseek
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FLISOL CTF - Desafío</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background-color: #f0f0f0; }
+        .container { background: white; padding: 30px; border-radius: 10px; max-width: 600px; margin: auto; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
+        code { background: #eef; padding: 2px 8px; border-radius: 4px; font-size: 1.2em; }
+        button { background: #4CAF50; color: white; padding: 10px 30px; border: none; border-radius: 5px; font-size: 1.1em; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>¡Bienvenido al FLISOL CTF!</h1>
+        <p>Tu misión: Infíltrate en la Raspberry Pi</p>
+        <p>🔐 <strong>Comando SSH:</strong> <code>ssh nivel1@10.3.141.1</code></p>
+        <p>🔑 <strong>Contraseña:</strong> <code>FLISOL2024</code></p>
+        <hr>
+        <p>📝 <strong>Comandos útiles:</strong> ls, cd, cat, find, grep</p>
+        <p>🎯 <strong>Objetivo final:</strong> Encontrar y desencriptar flag.txt.gpg</p>
+        <p><small>Haz clic en "Continuar" para activar tu conexión y empezar.</small></p>
+        <!-- ¡NO BORRES ESTA LÍNEA! Es necesaria para la autenticación -->
+        <form method='GET' action='$authaction'>
+            <input type='hidden' name='tok' value='$tok'>
+            <input type='hidden' name='redir' value='$redir'>
+            <input type='submit' value='Continuar'>
+        </form>
+    </div>
+</body>
+</html>
+
+
+¡Importante! No borres la parte del formulario con $authaction, $tok y $redir. 
+Es lo que permite que los usuarios se autentiquen y puedan usar la red
+
+reiniciamos para aplicar cambios:
+
+sudo systemctl restart nodogsplash
+
+
+Comprobación rápida
+Desde tu laptop, desconéctate del WiFi RaspAP y vuélvete a conectar.
+
+Abre el navegador e intenta ir a cualquier página (ej. http://ejemplo.com).
+
+Deberías ver tu página personalizada con las instrucciones del SSH.
+
+Haz clic en "Continuar" (esto autentica tu dispositivo).
+
+Ahora, desde una terminal, prueba el SSH: ssh nivel1@10.3.141.1 (cuando crees el usuario, claro).
+
+++++ luego sigue la creación de los niveles/usuarios en la raspi y dejar dentro los archivos a encontrar
+
+
+
